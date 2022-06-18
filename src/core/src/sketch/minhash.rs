@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 use std::fmt::Write;
 use std::iter::{Iterator, Peekable};
 use std::str;
-use std::sync::Mutex;
+use std::sync::RwLock;
 
 use serde::de::Deserializer;
 use serde::ser::{SerializeStruct, Serializer};
@@ -53,7 +53,7 @@ pub struct KmerMinHash {
     abunds: Option<Vec<u64>>,
 
     #[builder(default)]
-    md5sum: Mutex<Option<String>>,
+    md5sum: RwLock<Option<String>>,
 }
 
 impl PartialEq for KmerMinHash {
@@ -73,7 +73,7 @@ impl Clone for KmerMinHash {
             max_hash: self.max_hash,
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
-            md5sum: Mutex::new(Some(self.md5sum())),
+            md5sum: RwLock::new(Some(self.md5sum())),
         }
     }
 }
@@ -88,7 +88,7 @@ impl Default for KmerMinHash {
             max_hash: 0,
             mins: Vec::with_capacity(1000),
             abunds: None,
-            md5sum: Mutex::new(None),
+            md5sum: RwLock::new(None),
         }
     }
 }
@@ -168,7 +168,7 @@ impl<'de> Deserialize<'de> for KmerMinHash {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
-            md5sum: Mutex::new(Some(tmpsig.md5sum)),
+            md5sum: RwLock::new(Some(tmpsig.md5sum)),
             mins,
             abunds,
             hash_function,
@@ -207,7 +207,7 @@ impl KmerMinHash {
             max_hash,
             mins,
             abunds,
-            md5sum: Mutex::new(None),
+            md5sum: RwLock::new(None),
         }
     }
 
@@ -274,28 +274,38 @@ impl KmerMinHash {
     }
 
     fn reset_md5sum(&self) {
-        let mut data = self.md5sum.lock().unwrap();
-        if data.is_some() {
+        let reset = self.md5sum.read().unwrap().is_some();
+        if reset {
+            let mut data = self.md5sum.write().unwrap();
             *data = None;
         }
     }
 
     pub fn md5sum(&self) -> String {
-        let mut data = self.md5sum.lock().unwrap();
-        if data.is_none() {
-            let mut buffer = String::with_capacity(20);
+        // Fast path: we already cached md5sum
+        {
+            let data = self.md5sum.read().unwrap();
+            if data.is_some() {
+                return data.clone().unwrap();
+            }
+        }
 
-            let mut md5_ctx = md5::Context::new();
-            write!(&mut buffer, "{}", self.ksize()).unwrap();
+        // Slow path: need to calculate md5sum
+        let mut buffer = String::with_capacity(20);
+
+        let mut md5_ctx = md5::Context::new();
+        write!(&mut buffer, "{}", self.ksize()).unwrap();
+        md5_ctx.consume(&buffer);
+        buffer.clear();
+        for x in &self.mins {
+            write!(&mut buffer, "{}", x).unwrap();
             md5_ctx.consume(&buffer);
             buffer.clear();
-            for x in &self.mins {
-                write!(&mut buffer, "{}", x).unwrap();
-                md5_ctx.consume(&buffer);
-                buffer.clear();
-            }
-            *data = Some(format!("{:x}", md5_ctx.compute()));
         }
+
+        // Cache md5sum for future use
+        let mut data = self.md5sum.write().unwrap();
+        *data = Some(format!("{:x}", md5_ctx.compute()));
         data.clone().unwrap()
     }
 
@@ -965,7 +975,7 @@ pub struct KmerMinHashBTree {
     current_max: u64,
 
     #[builder(default)]
-    md5sum: Mutex<Option<String>>,
+    md5sum: RwLock<Option<String>>,
 }
 
 impl PartialEq for KmerMinHashBTree {
@@ -986,7 +996,7 @@ impl Clone for KmerMinHashBTree {
             mins: self.mins.clone(),
             abunds: self.abunds.clone(),
             current_max: self.current_max,
-            md5sum: Mutex::new(Some(self.md5sum())),
+            md5sum: RwLock::new(Some(self.md5sum())),
         }
     }
 }
@@ -1002,7 +1012,7 @@ impl Default for KmerMinHashBTree {
             mins: Default::default(),
             abunds: None,
             current_max: 0,
-            md5sum: Mutex::new(None),
+            md5sum: RwLock::new(None),
         }
     }
 }
@@ -1084,7 +1094,7 @@ impl<'de> Deserialize<'de> for KmerMinHashBTree {
             ksize: tmpsig.ksize,
             seed: tmpsig.seed,
             max_hash: tmpsig.max_hash,
-            md5sum: Mutex::new(Some(tmpsig.md5sum)),
+            md5sum: RwLock::new(Some(tmpsig.md5sum)),
             mins,
             abunds,
             hash_function,
@@ -1121,7 +1131,7 @@ impl KmerMinHashBTree {
             mins,
             abunds,
             current_max: 0,
-            md5sum: Mutex::new(None),
+            md5sum: RwLock::new(None),
         }
     }
 
@@ -1189,28 +1199,38 @@ impl KmerMinHashBTree {
     }
 
     fn reset_md5sum(&self) {
-        let mut data = self.md5sum.lock().unwrap();
-        if data.is_some() {
+        let reset = self.md5sum.read().unwrap().is_some();
+        if reset {
+            let mut data = self.md5sum.write().unwrap();
             *data = None;
         }
     }
 
     pub fn md5sum(&self) -> String {
-        let mut data = self.md5sum.lock().unwrap();
-        if data.is_none() {
-            let mut buffer = String::with_capacity(20);
+        // Fast path: we already cached md5sum
+        {
+            let data = self.md5sum.read().unwrap();
+            if data.is_some() {
+                return data.clone().unwrap();
+            }
+        }
 
-            let mut md5_ctx = md5::Context::new();
-            write!(&mut buffer, "{}", self.ksize()).unwrap();
+        // Slow path: need to calculate md5sum
+        let mut buffer = String::with_capacity(20);
+
+        let mut md5_ctx = md5::Context::new();
+        write!(&mut buffer, "{}", self.ksize()).unwrap();
+        md5_ctx.consume(&buffer);
+        buffer.clear();
+        for x in &self.mins {
+            write!(&mut buffer, "{}", x).unwrap();
             md5_ctx.consume(&buffer);
             buffer.clear();
-            for x in &self.mins {
-                write!(&mut buffer, "{}", x).unwrap();
-                md5_ctx.consume(&buffer);
-                buffer.clear();
-            }
-            *data = Some(format!("{:x}", md5_ctx.compute()));
         }
+
+        // Cache md5sum for future use
+        let mut data = self.md5sum.write().unwrap();
+        *data = Some(format!("{:x}", md5_ctx.compute()));
         data.clone().unwrap()
     }
 

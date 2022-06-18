@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::fs::{DirBuilder, File};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -24,11 +24,11 @@ pub trait Storage {
 }
 
 #[derive(Clone)]
-pub struct InnerStorage(Arc<Mutex<dyn Storage>>);
+pub struct InnerStorage(Arc<RwLock<dyn Storage>>);
 
 impl InnerStorage {
     pub fn new(inner: impl Storage + 'static) -> InnerStorage {
-        InnerStorage(Arc::new(Mutex::new(inner)))
+        InnerStorage(Arc::new(RwLock::new(inner)))
     }
 }
 
@@ -85,20 +85,20 @@ impl From<&StorageArgs> for FSStorage {
     }
 }
 
-impl<L> Storage for Mutex<L>
+impl<L> Storage for RwLock<L>
 where
     L: ?Sized + Storage,
 {
     fn save(&self, path: &str, content: &[u8]) -> Result<String, Error> {
-        self.lock().unwrap().save(path, content)
+        self.read().unwrap().save(path, content)
     }
 
     fn load(&self, path: &str) -> Result<Vec<u8>, Error> {
-        self.lock().unwrap().load(path)
+        self.read().unwrap().load(path)
     }
 
     fn args(&self) -> StorageArgs {
-        self.lock().unwrap().args()
+        self.read().unwrap().args()
     }
 }
 

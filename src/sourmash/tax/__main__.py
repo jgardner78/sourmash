@@ -15,7 +15,7 @@ from sourmash.lca.lca_utils import display_lineage, zip_lineage
 from . import tax_utils
 from .tax_utils import ClassificationResult, MultiLineageDB
 
-usage='''
+usage = """
 sourmash taxonomy <command> [<args>] - manipulate/work with taxonomy information.
 or
 sourmash tax <command> [<args>]
@@ -30,29 +30,29 @@ metagenome -g <gather_csv> [<gather_csv> ... ] -t [<taxonomy_csv> ...]    - summ
 ** Use '-h' to get subcommand-specific help, e.g.
 
 sourmash taxonomy metagenome -h
-'''
+"""
 
 _output_type_to_ext = {
-    'csv_summary': '.summarized.csv',
-    'classification': '.classifications.csv',
-    'krona': '.krona.tsv',
-    'lineage_summary': '.lineage_summary.tsv',
-    'annotate': '.with-lineages.csv',
-    'human': '.human.txt',
-    'lineage_csv': '.lineage.csv',
-    'kreport': ".kreport.txt",
-    }
+    "csv_summary": ".summarized.csv",
+    "classification": ".classifications.csv",
+    "krona": ".krona.tsv",
+    "lineage_summary": ".lineage_summary.tsv",
+    "annotate": ".with-lineages.csv",
+    "human": ".human.txt",
+    "lineage_csv": ".lineage.csv",
+    "kreport": ".kreport.txt",
+}
 
 # some utils
-def make_outfile(base, output_type, *, output_dir = ""):
-    limit_float_decimals=False
+def make_outfile(base, output_type, *, output_dir=""):
+    limit_float_decimals = False
     if base == "-":
-        limit_float_decimals=True
+        limit_float_decimals = True
         return base, limit_float_decimals
 
     ext = _output_type_to_ext[output_type]
 
-    fname = base+ext
+    fname = base + ext
     if output_dir:
         fname = os.path.join(output_dir, fname)
     notify(f"saving '{output_type}' output to '{fname}'.")
@@ -68,34 +68,51 @@ def metagenome(args):
 
     # first, load taxonomic_assignments
     try:
-        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+        tax_assign = MultiLineageDB.load(
+            args.taxonomy_csv,
+            keep_full_identifiers=args.keep_full_identifiers,
+            keep_identifier_versions=args.keep_identifier_versions,
+            force=args.force,
+        )
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
 
     if not tax_assign:
-        error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
+        error(
+            f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.'
+        )
         sys.exit(-1)
 
     if args.rank and args.rank not in available_ranks:
-        error(f"ERROR: No taxonomic information provided for rank {args.rank}: cannot summarize at this rank")
+        error(
+            f"ERROR: No taxonomic information provided for rank {args.rank}: cannot summarize at this rank"
+        )
         sys.exit(-1)
 
     # next, collect and load gather results
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file= args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(
+        args.gather_csv, from_file=args.from_file
+    )
     try:
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                                       fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+        (
+            gather_results,
+            idents_missed,
+            total_missed,
+            _,
+        ) = tax_utils.check_and_load_gather_csvs(
+            gather_csvs,
+            tax_assign,
+            force=args.force,
+            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+        )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
 
     if not gather_results:
-        notify('No gather results loaded. Exiting.')
+        notify("No gather results loaded. Exiting.")
         sys.exit(-1)
 
     # actually summarize at rank
@@ -103,10 +120,15 @@ def metagenome(args):
     seen_perfect = set()
     for rank in sourmash.lca.taxlist(include_strain=False):
         try:
-            summarized_gather[rank], seen_perfect, _ = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                keep_full_identifiers=args.keep_full_identifiers,
-                                                                keep_identifier_versions = args.keep_identifier_versions,
-                                                                seen_perfect = seen_perfect)
+            summarized_gather[rank], seen_perfect, _ = tax_utils.summarize_gather_at(
+                rank,
+                tax_assign,
+                gather_results,
+                skip_idents=idents_missed,
+                keep_full_identifiers=args.keep_full_identifiers,
+                keep_identifier_versions=args.keep_identifier_versions,
+                seen_perfect=seen_perfect,
+            )
 
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
@@ -114,38 +136,56 @@ def metagenome(args):
 
     # write summarized output csv
     if "csv_summary" in args.output_format:
-        summary_outfile, limit_float = make_outfile(args.output_base, "csv_summary", output_dir=args.output_dir)
+        summary_outfile, limit_float = make_outfile(
+            args.output_base, "csv_summary", output_dir=args.output_dir
+        )
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_summary(summarized_gather, out_fp, limit_float_decimals=limit_float)
+            tax_utils.write_summary(
+                summarized_gather, out_fp, limit_float_decimals=limit_float
+            )
 
     # write summarized output in human-readable format
     if "human" in args.output_format:
-        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
+        summary_outfile, limit_float = make_outfile(
+            args.output_base, "human", output_dir=args.output_dir
+        )
 
         with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(summarized_gather, out_fp, args.rank or "species")
+            tax_utils.write_human_summary(
+                summarized_gather, out_fp, args.rank or "species"
+            )
 
     # if lineage summary table
     if "lineage_summary" in args.output_format:
-        lineage_outfile, limit_float = make_outfile(args.output_base, "lineage_summary", output_dir=args.output_dir)
+        lineage_outfile, limit_float = make_outfile(
+            args.output_base, "lineage_summary", output_dir=args.output_dir
+        )
 
         ## aggregate by lineage, by query
-        lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(summarized_gather[args.rank], by_query=True)
+        lineageD, query_names, num_queries = tax_utils.aggregate_by_lineage_at_rank(
+            summarized_gather[args.rank], by_query=True
+        )
 
         with FileOutputCSV(lineage_outfile) as out_fp:
-            tax_utils.write_lineage_sample_frac(query_names, lineageD, out_fp, format_lineage=True, sep='\t')
+            tax_utils.write_lineage_sample_frac(
+                query_names, lineageD, out_fp, format_lineage=True, sep="\t"
+            )
 
     # write summarized --> krona output tsv
     if "krona" in args.output_format:
         krona_resultslist = tax_utils.format_for_krona(args.rank, summarized_gather)
 
-        krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
+        krona_outfile, limit_float = make_outfile(
+            args.output_base, "krona", output_dir=args.output_dir
+        )
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_resultslist, out_fp)
 
     # write summarized --> kreport output tsv
     if "kreport" in args.output_format:
-        kreport_outfile, limit_float = make_outfile(args.output_base, "kreport", output_dir=args.output_dir)
+        kreport_outfile, limit_float = make_outfile(
+            args.output_base, "kreport", output_dir=args.output_dir
+        )
 
         with FileOutputCSV(kreport_outfile) as out_fp:
             tax_utils.write_kreport(summarized_gather, out_fp)
@@ -159,28 +199,36 @@ def genome(args):
 
     # first, load taxonomic_assignments
     try:
-        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+        tax_assign = MultiLineageDB.load(
+            args.taxonomy_csv,
+            keep_full_identifiers=args.keep_full_identifiers,
+            keep_identifier_versions=args.keep_identifier_versions,
+            force=args.force,
+        )
         available_ranks = tax_assign.available_ranks
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
 
     if not tax_assign:
-        error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
+        error(
+            f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.'
+        )
         sys.exit(-1)
 
     if args.rank and args.rank not in available_ranks:
-        error(f"ERROR: No taxonomic information provided for rank {args.rank}: cannot classify at this rank")
+        error(
+            f"ERROR: No taxonomic information provided for rank {args.rank}: cannot classify at this rank"
+        )
         sys.exit(-1)
 
     # get gather_csvs from args
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(
+        args.gather_csv, from_file=args.from_file
+    )
 
     classifications = defaultdict(list)
-    matched_queries=set()
+    matched_queries = set()
     krona_results = []
     status = "nomatch"
     seen_perfect = set()
@@ -189,8 +237,17 @@ def genome(args):
     # note: doing one CSV at a time would work and probably be more memory efficient, but we would need to change how we check
     # for duplicated queries
     try:
-        gather_results, idents_missed, total_missed, _ = tax_utils.check_and_load_gather_csvs(gather_csvs, tax_assign, force=args.force,
-                                                                            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+        (
+            gather_results,
+            idents_missed,
+            total_missed,
+            _,
+        ) = tax_utils.check_and_load_gather_csvs(
+            gather_csvs,
+            tax_assign,
+            force=args.force,
+            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+        )
 
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
@@ -200,33 +257,61 @@ def genome(args):
     estimate_query_ani = True
     if args.rank:
         try:
-            best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(args.rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                     keep_full_identifiers=args.keep_full_identifiers,
-                                                     keep_identifier_versions = args.keep_identifier_versions,
-                                                     best_only=True, seen_perfect=seen_perfect, estimate_query_ani=True)
+            (
+                best_at_rank,
+                seen_perfect,
+                estimate_query_ani,
+            ) = tax_utils.summarize_gather_at(
+                args.rank,
+                tax_assign,
+                gather_results,
+                skip_idents=idents_missed,
+                keep_full_identifiers=args.keep_full_identifiers,
+                keep_identifier_versions=args.keep_identifier_versions,
+                best_only=True,
+                seen_perfect=seen_perfect,
+                estimate_query_ani=True,
+            )
 
         except ValueError as exc:
             error(f"ERROR: {str(exc)}")
             sys.exit(-1)
 
-       # best at rank is a list of SummarizedGather tuples
+        # best at rank is a list of SummarizedGather tuples
         for sg in best_at_rank:
-            status = 'nomatch'
+            status = "nomatch"
             if sg.query_name in matched_queries:
                 continue
             if args.ani_threshold and sg.query_ani_at_rank < args.ani_threshold:
-                status="below_threshold"
-                notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet query ANI/AAI threshold {args.ani_threshold}")
-            elif sg.fraction <= args.containment_threshold: # should this just be less than?
-                status="below_threshold"
-                notify(f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}")
+                status = "below_threshold"
+                notify(
+                    f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet query ANI/AAI threshold {args.ani_threshold}"
+                )
+            elif (
+                sg.fraction <= args.containment_threshold
+            ):  # should this just be less than?
+                status = "below_threshold"
+                notify(
+                    f"WARNING: classifying query {sg.query_name} at desired rank {args.rank} does not meet containment threshold {args.containment_threshold}"
+                )
             else:
-                status="match"
-            classif = ClassificationResult(sg.query_name, status, sg.rank, sg.fraction, sg.lineage, sg.query_md5, sg.query_filename, sg.f_weighted_at_rank, sg.bp_match_at_rank, sg.query_ani_at_rank)
+                status = "match"
+            classif = ClassificationResult(
+                sg.query_name,
+                status,
+                sg.rank,
+                sg.fraction,
+                sg.lineage,
+                sg.query_md5,
+                sg.query_filename,
+                sg.f_weighted_at_rank,
+                sg.bp_match_at_rank,
+                sg.query_ani_at_rank,
+            )
             classifications[args.rank].append(classif)
             matched_queries.add(sg.query_name)
             if "krona" in args.output_format:
-                lin_list = display_lineage(sg.lineage).split(';')
+                lin_list = display_lineage(sg.lineage).split(";")
                 krona_results.append((sg.fraction, *lin_list))
     else:
         # classify to the rank/match that passes the containment threshold.
@@ -234,56 +319,93 @@ def genome(args):
         for rank in tax_utils.ascending_taxlist(include_strain=False):
             # gets best_at_rank for all queries in this gather_csv
             try:
-                best_at_rank, seen_perfect, estimate_query_ani = tax_utils.summarize_gather_at(rank, tax_assign, gather_results, skip_idents=idents_missed,
-                                                                                                keep_full_identifiers=args.keep_full_identifiers,
-                                                                                                keep_identifier_versions = args.keep_identifier_versions,
-                                                                                                best_only=True, seen_perfect=seen_perfect, estimate_query_ani=estimate_query_ani)
+                (
+                    best_at_rank,
+                    seen_perfect,
+                    estimate_query_ani,
+                ) = tax_utils.summarize_gather_at(
+                    rank,
+                    tax_assign,
+                    gather_results,
+                    skip_idents=idents_missed,
+                    keep_full_identifiers=args.keep_full_identifiers,
+                    keep_identifier_versions=args.keep_identifier_versions,
+                    best_only=True,
+                    seen_perfect=seen_perfect,
+                    estimate_query_ani=estimate_query_ani,
+                )
             except ValueError as exc:
                 error(f"ERROR: {str(exc)}")
                 sys.exit(-1)
 
             for sg in best_at_rank:
-                status = 'nomatch'
+                status = "nomatch"
                 if sg.query_name in matched_queries:
                     continue
-                if sg.query_ani_at_rank is not None and args.ani_threshold and sg.query_ani_at_rank >= args.ani_threshold:
-                    status="match"
+                if (
+                    sg.query_ani_at_rank is not None
+                    and args.ani_threshold
+                    and sg.query_ani_at_rank >= args.ani_threshold
+                ):
+                    status = "match"
                 elif sg.fraction >= args.containment_threshold:
                     status = "match"
                 if status == "match":
-                    classif = ClassificationResult(query_name=sg.query_name, status=status, rank=sg.rank,
-                                                    fraction=sg.fraction, lineage=sg.lineage,
-                                                    query_md5=sg.query_md5, query_filename=sg.query_filename,
-                                                    f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank,
-                                                    query_ani_at_rank= sg.query_ani_at_rank)
+                    classif = ClassificationResult(
+                        query_name=sg.query_name,
+                        status=status,
+                        rank=sg.rank,
+                        fraction=sg.fraction,
+                        lineage=sg.lineage,
+                        query_md5=sg.query_md5,
+                        query_filename=sg.query_filename,
+                        f_weighted_at_rank=sg.f_weighted_at_rank,
+                        bp_match_at_rank=sg.bp_match_at_rank,
+                        query_ani_at_rank=sg.query_ani_at_rank,
+                    )
                     classifications[sg.rank].append(classif)
                     matched_queries.add(sg.query_name)
                     continue
                 elif rank == "superkingdom" and status == "nomatch":
-                    status="below_threshold"
-                    classif = ClassificationResult(query_name=sg.query_name, status=status,
-                                                   rank="", fraction=0, lineage="",
-                                                   query_md5=sg.query_md5, query_filename=sg.query_filename,
-                                                   f_weighted_at_rank=sg.f_weighted_at_rank, bp_match_at_rank=sg.bp_match_at_rank, 
-                                                   query_ani_at_rank=sg.query_ani_at_rank)
+                    status = "below_threshold"
+                    classif = ClassificationResult(
+                        query_name=sg.query_name,
+                        status=status,
+                        rank="",
+                        fraction=0,
+                        lineage="",
+                        query_md5=sg.query_md5,
+                        query_filename=sg.query_filename,
+                        f_weighted_at_rank=sg.f_weighted_at_rank,
+                        bp_match_at_rank=sg.bp_match_at_rank,
+                        query_ani_at_rank=sg.query_ani_at_rank,
+                    )
                     classifications[sg.rank].append(classif)
 
     if not any([classifications, krona_results]):
-        notify('No results for classification. Exiting.')
+        notify("No results for classification. Exiting.")
         sys.exit(-1)
 
     # write outputs
     if "csv_summary" in args.output_format:
-        summary_outfile, limit_float = make_outfile(args.output_base, "classification", output_dir=args.output_dir)
+        summary_outfile, limit_float = make_outfile(
+            args.output_base, "classification", output_dir=args.output_dir
+        )
         with FileOutputCSV(summary_outfile) as out_fp:
-            tax_utils.write_classifications(classifications, out_fp, limit_float_decimals=limit_float)
+            tax_utils.write_classifications(
+                classifications, out_fp, limit_float_decimals=limit_float
+            )
 
     # write summarized output in human-readable format
     if "human" in args.output_format:
-        summary_outfile, limit_float = make_outfile(args.output_base, "human", output_dir=args.output_dir)
+        summary_outfile, limit_float = make_outfile(
+            args.output_base, "human", output_dir=args.output_dir
+        )
 
         with FileOutput(summary_outfile) as out_fp:
-            tax_utils.write_human_summary(classifications, out_fp, args.rank or "species")
+            tax_utils.write_human_summary(
+                classifications, out_fp, args.rank or "species"
+            )
 
     if "krona" in args.output_format:
         # classifications only at a single rank
@@ -291,7 +413,9 @@ def genome(args):
         if args.rank:
             assert args.rank in classifications
 
-        krona_outfile, limit_float = make_outfile(args.output_base, "krona", output_dir=args.output_dir)
+        krona_outfile, limit_float = make_outfile(
+            args.output_base, "krona", output_dir=args.output_dir
+        )
         with FileOutputCSV(krona_outfile) as out_fp:
             tax_utils.write_krona(args.rank, krona_results, out_fp)
 
@@ -301,8 +425,9 @@ def genome(args):
         if args.rank:
             assert args.rank in classifications
 
-        lineage_outfile, _ = make_outfile(args.output_base, "lineage_csv",
-                                          output_dir=args.output_dir)
+        lineage_outfile, _ = make_outfile(
+            args.output_base, "lineage_csv", output_dir=args.output_dir
+        )
         with FileOutputCSV(lineage_outfile) as out_fp:
             tax_utils.write_lineage_csv(classifications, out_fp)
 
@@ -318,44 +443,65 @@ def annotate(args):
 
     # first, load taxonomic_assignments
     try:
-        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                       keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions,
-                       force=args.force)
+        tax_assign = MultiLineageDB.load(
+            args.taxonomy_csv,
+            keep_full_identifiers=args.keep_full_identifiers,
+            keep_identifier_versions=args.keep_identifier_versions,
+            force=args.force,
+        )
     except ValueError as exc:
         error(f"ERROR: {str(exc)}")
         sys.exit(-1)
 
     if not tax_assign:
-        error(f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.')
+        error(
+            f'ERROR: No taxonomic assignments loaded from {",".join(args.taxonomy_csv)}. Exiting.'
+        )
         sys.exit(-1)
 
     # get gather_csvs from args
-    gather_csvs = tax_utils.collect_gather_csvs(args.gather_csv, from_file=args.from_file)
+    gather_csvs = tax_utils.collect_gather_csvs(
+        args.gather_csv, from_file=args.from_file
+    )
 
     # handle each gather csv separately
     for n, g_csv in enumerate(gather_csvs):
-        gather_results, idents_missed, total_missed, header = tax_utils.check_and_load_gather_csvs(g_csv, tax_assign, force=args.force,
-                                                                                 fail_on_missing_taxonomy=args.fail_on_missing_taxonomy)
+        (
+            gather_results,
+            idents_missed,
+            total_missed,
+            header,
+        ) = tax_utils.check_and_load_gather_csvs(
+            g_csv,
+            tax_assign,
+            force=args.force,
+            fail_on_missing_taxonomy=args.fail_on_missing_taxonomy,
+        )
 
         if not gather_results:
             continue
 
-        out_base = os.path.basename(g_csv.rsplit('.csv')[0])
-        this_outfile, limit_float = make_outfile(out_base, "annotate", output_dir=args.output_dir)
+        out_base = os.path.basename(g_csv.rsplit(".csv")[0])
+        this_outfile, limit_float = make_outfile(
+            out_base, "annotate", output_dir=args.output_dir
+        )
 
         with FileOutputCSV(this_outfile) as out_fp:
             header.append("lineage")
-            w = csv.DictWriter(out_fp, header, delimiter=',')
+            w = csv.DictWriter(out_fp, header, delimiter=",")
             w.writeheader()
 
             # add taxonomy info and then print directly
             for row in gather_results:
-                match_ident = row['name']
-                lineage = tax_utils.find_match_lineage(match_ident, tax_assign, skip_idents=idents_missed,
-                                             keep_full_identifiers=args.keep_full_identifiers,
-                                             keep_identifier_versions=args.keep_identifier_versions)
-                row['lineage'] = display_lineage(lineage)
+                match_ident = row["name"]
+                lineage = tax_utils.find_match_lineage(
+                    match_ident,
+                    tax_assign,
+                    skip_idents=idents_missed,
+                    keep_full_identifiers=args.keep_full_identifiers,
+                    keep_identifier_versions=args.keep_identifier_versions,
+                )
+                row["lineage"] = display_lineage(lineage)
                 w.writerow(row)
 
 
@@ -363,10 +509,12 @@ def prepare(args):
     "Combine multiple taxonomy databases into one and/or translate formats."
     notify("loading taxonomies...")
     try:
-        tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                                         force=args.force,
-                       keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions)
+        tax_assign = MultiLineageDB.load(
+            args.taxonomy_csv,
+            force=args.force,
+            keep_full_identifiers=args.keep_full_identifiers,
+            keep_identifier_versions=args.keep_identifier_versions,
+        )
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))
@@ -387,14 +535,15 @@ def prepare(args):
 
 def grep(args):
     term = args.pattern
-    tax_assign = MultiLineageDB.load(args.taxonomy_csv,
-                                     force=args.force)
+    tax_assign = MultiLineageDB.load(args.taxonomy_csv, force=args.force)
 
     silent = args.silent or args.count
 
     notify(f"searching {len(args.taxonomy_csv)} taxonomy files for '{term}'")
     if args.invert_match:
-        notify("-v/--invert-match specified; returning only lineages that do not match.")
+        notify(
+            "-v/--invert-match specified; returning only lineages that do not match."
+        )
     if args.rank:
         notify(f"limiting matches to {args.rank} level")
 
@@ -414,8 +563,10 @@ def grep(args):
         return False
 
     if args.invert_match:
+
         def search_pattern(l, r):
             return not find_pattern(l, r)
+
     else:
         search_pattern = find_pattern
 
@@ -431,21 +582,25 @@ def grep(args):
         with FileOutputCSV(args.output) as fp:
             w = csv.writer(fp)
 
-            w.writerow(['ident'] + list(sourmash.lca.taxlist(include_strain=False)))
+            w.writerow(["ident"] + list(sourmash.lca.taxlist(include_strain=False)))
             for ident, lineage in sorted(match_ident):
-                w.writerow([ident] + [ x.name for x in lineage ])
+                w.writerow([ident] + [x.name for x in lineage])
 
-        notify(f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'")
+        notify(
+            f"found {len(match_ident)} matches; saved identifiers to picklist file '{args.output}'"
+        )
 
 
 def summarize(args):
     "Summarize multiple taxonomy databases."
     notify("loading taxonomies...")
     try:
-        tax_assign = MultiLineageDB.load(args.taxonomy_files,
-                                         force=args.force,
-                       keep_full_identifiers=args.keep_full_identifiers,
-                       keep_identifier_versions=args.keep_identifier_versions)
+        tax_assign = MultiLineageDB.load(
+            args.taxonomy_files,
+            force=args.force,
+            keep_full_identifiers=args.keep_full_identifiers,
+            keep_identifier_versions=args.keep_identifier_versions,
+        )
     except ValueError as exc:
         error("ERROR while loading taxonomies!")
         error(str(exc))
@@ -483,7 +638,7 @@ def summarize(args):
 
         with FileOutputCSV(args.output_lineage_information) as fp:
             w = csv.writer(fp)
-            w.writerow(['rank', 'lineage_count', 'lineage'])
+            w.writerow(["rank", "lineage_count", "lineage"])
 
             # output in order of most common
             for lineage, count in lineage_counts.most_common():
@@ -498,9 +653,9 @@ def summarize(args):
 def main(arglist=None):
     args = sourmash.cli.get_parser().parse_args(arglist)
     submod = getattr(sourmash.cli.sig, args.subcmd)
-    mainmethod = getattr(submod, 'main')
+    mainmethod = getattr(submod, "main")
     return mainmethod(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(sys.argv)

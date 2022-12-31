@@ -9,15 +9,15 @@ from sourmash.picklist import SignaturePicklist
 
 
 def test_load_empty_picklist_fail():
-    empty = utils.get_test_data('picklist/empty.csv')
+    empty = utils.get_test_data("picklist/empty.csv")
 
-    pl = SignaturePicklist('manifest')
+    pl = SignaturePicklist("manifest")
     with pytest.raises(ValueError):
-        pl.load(empty, 'foo', allow_empty=False)
+        pl.load(empty, "foo", allow_empty=False)
 
 
 def test_load_empty_picklist_allow():
-    empty = utils.get_test_data('picklist/empty.csv')
+    empty = utils.get_test_data("picklist/empty.csv")
 
-    pl = SignaturePicklist('manifest')
-    pl.load(empty, 'foo', allow_empty=True)
+    pl = SignaturePicklist("manifest")
+    pl.load(empty, "foo", allow_empty=True)

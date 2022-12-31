@@ -46,7 +46,7 @@ def rankinfo_main(args):
     rankinfo!
     """
     if not args.db:
-        error('Error! must specify at least one LCA database with --db')
+        error("Error! must specify at least one LCA database with --db")
         sys.exit(-1)
 
     set_quiet(args.quiet, args.debug)
@@ -74,8 +74,8 @@ def rankinfo_main(args):
     else:
         for rank in lca_utils.taxlist():
             count = counts_by_rank.get(rank, 0)
-            print('{}: {} ({:.1f}%)'.format(rank, count, count / total * 100.))
+            print(f"{rank}: {count} ({count / total * 100.:.1f}%)")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(rankinfo_main(sys.argv[1:]))

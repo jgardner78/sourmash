@@ -139,21 +139,25 @@ class TimeMinAbundanceSuite(TimeMinHashSuite):
         for i in range(500):
             mh.set_abundances(mins, clear=False)
 
+
 class PeakmemMinAbundanceSuite(PeakmemMinHashSuite):
     def setup(self):
         PeakmemMinHashSuite.setup(self)
         self.mh = MinHash(500, 21, track_abundance=True)
 
+
 ####################
 
-class TimeZipStorageSuite:
 
+class TimeZipStorageSuite:
     def setup(self):
         import zipfile
+
         self.zipfile = NamedTemporaryFile()
 
-        with zipfile.ZipFile(self.zipfile, mode='w',
-                          compression=zipfile.ZIP_STORED) as storage:
+        with zipfile.ZipFile(
+            self.zipfile, mode="w", compression=zipfile.ZIP_STORED
+        ) as storage:
             for i in range(100_000):
                 # just so we have lots of entries
                 storage.writestr(str(i), b"0")
@@ -177,16 +181,17 @@ class TimeZipStorageSuite:
 class PeakmemZipStorageSuite:
     def setup(self):
         import zipfile
+
         self.zipfile = NamedTemporaryFile()
 
-        with zipfile.ZipFile(self.zipfile, mode='w',
-                          compression=zipfile.ZIP_STORED) as storage:
+        with zipfile.ZipFile(
+            self.zipfile, mode="w", compression=zipfile.ZIP_STORED
+        ) as storage:
             for i in range(100_000):
                 # just so we have lots of entries
                 storage.writestr(str(i), b"0")
             # one big-ish entry
             storage.writestr("sig1", b"9" * 1_000_000)
-
 
     def peakmem_load_from_zipstorage(self):
         with ZipStorage(self.zipfile.name) as storage:

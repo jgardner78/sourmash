@@ -39,7 +39,7 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
 
     for i, j in iterator:
         if return_ani:
-            ani_result = siglist[i].jaccard_ani(siglist[j],downsample=downsample)
+            ani_result = siglist[i].jaccard_ani(siglist[j], downsample=downsample)
             if not potential_false_negatives and ani_result.p_exceeds_threshold:
                 potential_false_negatives = True
             if not jaccard_ani_untrustworthy and ani_result.je_exceeds_threshold:
@@ -49,12 +49,18 @@ def compare_serial(siglist, ignore_abundance, *, downsample=False, return_ani=Fa
                 ani = 0.0
             similarities[i][j] = similarities[j][i] = ani
         else:
-            similarities[i][j] = similarities[j][i] = siglist[i].similarity(siglist[j], ignore_abundance=ignore_abundance, downsample=downsample)
+            similarities[i][j] = similarities[j][i] = siglist[i].similarity(
+                siglist[j], ignore_abundance=ignore_abundance, downsample=downsample
+            )
 
     if jaccard_ani_untrustworthy:
-        notify("WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons.")
+        notify(
+            "WARNING: Jaccard estimation for at least one of these comparisons is likely inaccurate. Could not estimate ANI for these comparisons."
+        )
     if potential_false_negatives:
-        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
+        notify(
+            "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this."
+        )
     return similarities
 
 
@@ -78,7 +84,9 @@ def compare_serial_containment(siglist, *, downsample=False, return_ani=False):
             if i == j:
                 containments[i][j] = 1
             elif return_ani:
-                ani_result = siglist[j].containment_ani(siglist[i], downsample=downsample)
+                ani_result = siglist[j].containment_ani(
+                    siglist[i], downsample=downsample
+                )
                 ani = ani_result.ani
                 if not potential_false_negatives and ani_result.p_exceeds_threshold:
                     potential_false_negatives = True
@@ -86,11 +94,14 @@ def compare_serial_containment(siglist, *, downsample=False, return_ani=False):
                     ani = 0.0
                 containments[i][j] = ani
             else:
-                containments[i][j] = siglist[j].contained_by(siglist[i],
-                                                         downsample=downsample)
+                containments[i][j] = siglist[j].contained_by(
+                    siglist[i], downsample=downsample
+                )
 
     if potential_false_negatives:
-        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
+        notify(
+            "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this."
+        )
 
     return containments
 
@@ -115,7 +126,9 @@ def compare_serial_max_containment(siglist, *, downsample=False, return_ani=Fals
 
     for i, j in iterator:
         if return_ani:
-            ani_result = siglist[j].max_containment_ani(siglist[i], downsample=downsample)
+            ani_result = siglist[j].max_containment_ani(
+                siglist[i], downsample=downsample
+            )
             ani = ani_result.ani
             if not potential_false_negatives and ani_result.p_exceeds_threshold:
                 potential_false_negatives = True
@@ -123,10 +136,13 @@ def compare_serial_max_containment(siglist, *, downsample=False, return_ani=Fals
                 ani = 0.0
             containments[i][j] = containments[j][i] = ani
         else:
-            containments[i][j] = containments[j][i] = siglist[j].max_containment(siglist[i],
-                                                        downsample=downsample)
+            containments[i][j] = containments[j][i] = siglist[j].max_containment(
+                siglist[i], downsample=downsample
+            )
     if potential_false_negatives:
-        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
+        notify(
+            "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this."
+        )
 
     return containments
 
@@ -159,11 +175,14 @@ def compare_serial_avg_containment(siglist, *, downsample=False, return_ani=Fals
                 potential_false_negatives = True
             containments[i][j] = containments[j][i] = ani
         else:
-            containments[i][j] = containments[j][i] = siglist[j].avg_containment(siglist[i],
-                                                        downsample=downsample)
+            containments[i][j] = containments[j][i] = siglist[j].avg_containment(
+                siglist[i], downsample=downsample
+            )
 
     if potential_false_negatives:
-        notify("WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this.")
+        notify(
+            "WARNING: Some of these sketches may have no hashes in common based on chance alone (false negatives). Consider decreasing your scaled value to prevent this."
+        )
 
     return containments
 
@@ -178,12 +197,14 @@ def similarity_args_unpack(args, ignore_abundance, *, downsample, return_ani=Fal
             ani = 0.0
         return ani
     else:
-        return sig1.similarity(sig2,
-                           ignore_abundance=ignore_abundance,
-                           downsample=downsample)
+        return sig1.similarity(
+            sig2, ignore_abundance=ignore_abundance, downsample=downsample
+        )
 
 
-def get_similarities_at_index(index, ignore_abundance, downsample, siglist, *, return_ani=False):
+def get_similarities_at_index(
+    index, ignore_abundance, downsample, siglist, *, return_ani=False
+):
     """Returns similarities of all the combinations of signature at index in
     the siglist with the rest of the indices starting at index + 1. Doesn't
     redundantly calculate signatures with all the other indices prior to
@@ -202,18 +223,24 @@ def get_similarities_at_index(index, ignore_abundance, downsample, siglist, *, r
         with rest of the signatures from index+1
     """
     startt = time.time()
-    sig_iterator = itertools.product([siglist[index]], siglist[index + 1:])
-    func = partial(similarity_args_unpack,
-                   ignore_abundance=ignore_abundance,
-                   downsample=downsample,
-                   return_ani=return_ani)
+    sig_iterator = itertools.product([siglist[index]], siglist[index + 1 :])
+    func = partial(
+        similarity_args_unpack,
+        ignore_abundance=ignore_abundance,
+        downsample=downsample,
+        return_ani=return_ani,
+    )
     similarity_list = list(map(func, sig_iterator))
     notify(
-        f"comparison for index {index} done in {time.time() - startt:.5f} seconds", end='\r')
+        f"comparison for index {index} done in {time.time() - startt:.5f} seconds",
+        end="\r",
+    )
     return similarity_list
 
 
-def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, *, return_ani=False):
+def compare_parallel(
+    siglist, ignore_abundance, downsample, n_jobs, *, return_ani=False
+):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations parallely on number of processes
     given by n_jobs
@@ -256,7 +283,8 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, *, return_an
         siglist=siglist,
         ignore_abundance=ignore_abundance,
         downsample=downsample,
-        return_ani=return_ani)
+        return_ani=return_ani,
+    )
     notify("Created similarity func")
 
     # Initialize multiprocess.pool
@@ -279,19 +307,27 @@ def compare_parallel(siglist, ignore_abundance, downsample, n_jobs, *, return_an
         startt = time.time()
         col_idx = index + 1
         for idx_condensed, item in enumerate(l):
-            memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[idx_condensed + col_idx, index] = item
+            memmap_similarities[index, col_idx + idx_condensed] = memmap_similarities[
+                idx_condensed + col_idx, index
+            ] = item
         notify(
-            f"Setting similarities matrix for index {index} done in {time.time() - startt:.5f} seconds", end='\r')
+            f"Setting similarities matrix for index {index} done in {time.time() - startt:.5f} seconds",
+            end="\r",
+        )
     notify("Setting similarities completed")
 
     pool.close()
     pool.join()
 
-    notify(f"Time taken to compare all pairs parallely is {time.time() - start_initial:.5f} seconds ")
+    notify(
+        f"Time taken to compare all pairs parallely is {time.time() - start_initial:.5f} seconds "
+    )
     return np.memmap(filename, dtype=np.float64, shape=(length_siglist, length_siglist))
 
 
-def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, return_ani=False):
+def compare_all_pairs(
+    siglist, ignore_abundance, downsample=False, n_jobs=None, return_ani=False
+):
     """Compare all combinations of signatures and return a matrix
     of similarities. Processes combinations either serially or
     based on parallely on number of processes given by n_jobs
@@ -309,7 +345,14 @@ def compare_all_pairs(siglist, ignore_abundance, downsample=False, n_jobs=None, 
     :return: np.array similarity matrix
     """
     if n_jobs is None or n_jobs == 1:
-        similarities = compare_serial(siglist, ignore_abundance=ignore_abundance, downsample=downsample, return_ani=return_ani)
+        similarities = compare_serial(
+            siglist,
+            ignore_abundance=ignore_abundance,
+            downsample=downsample,
+            return_ani=return_ani,
+        )
     else:
-        similarities = compare_parallel(siglist, ignore_abundance, downsample, n_jobs, return_ani=return_ani)
+        similarities = compare_parallel(
+            siglist, ignore_abundance, downsample, n_jobs, return_ani=return_ani
+        )
     return similarities

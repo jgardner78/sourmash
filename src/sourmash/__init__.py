@@ -17,17 +17,19 @@ BSD 3-Clause license.
 """
 from deprecation import deprecated
 
-__all__ = ['MinHash', 'SourmashSignature',
-           'load_one_signature',
-           'SourmashSignature',
-           'load_file_as_index',
-           'load_file_as_signatures',
-           'save_signatures',
-           'create_sbt_index',
-           'load_signatures',     # deprecated - remove in 5.0
-           'load_sbt_index',      # deprecated - remove in 5.0
-           'search_sbt_index',    # deprecated - remove in 5.0
-          ]
+__all__ = [
+    "MinHash",
+    "SourmashSignature",
+    "load_one_signature",
+    "SourmashSignature",
+    "load_file_as_index",
+    "load_file_as_signatures",
+    "save_signatures",
+    "create_sbt_index",
+    "load_signatures",  # deprecated - remove in 5.0
+    "load_sbt_index",  # deprecated - remove in 5.0
+    "search_sbt_index",  # deprecated - remove in 5.0
+]
 
 from ._lowlevel import ffi, lib
 
@@ -59,9 +61,13 @@ from .signature import (
     save_signatures,
 )
 
-@deprecated(deprecated_in="3.5.1", removed_in="5.0",
-            current_version=VERSION,
-            details='Use load_file_as_signatures instead.')
+
+@deprecated(
+    deprecated_in="3.5.1",
+    removed_in="5.0",
+    current_version=VERSION,
+    details="Use load_file_as_signatures instead.",
+)
 def load_signatures(*args, **kwargs):
     """Load a JSON string with signatures into classes.
 
@@ -76,12 +82,17 @@ def load_signatures(*args, **kwargs):
     """
     return load_signatures_private(*args, **kwargs)
 
+
 from .sbtmh import load_sbt_index as load_sbt_index_private
 from .sbtmh import search_sbt_index as search_sbt_index_private
 
-@deprecated(deprecated_in="3.5.1", removed_in="5.0",
-            current_version=VERSION,
-            details='Use load_file_as_index instead.')
+
+@deprecated(
+    deprecated_in="3.5.1",
+    removed_in="5.0",
+    current_version=VERSION,
+    details="Use load_file_as_index instead.",
+)
 def load_sbt_index(*args, **kwargs):
     """Load and return an SBT index.
 
@@ -91,9 +102,12 @@ def load_sbt_index(*args, **kwargs):
     return load_sbt_index_private(*args, **kwargs)
 
 
-@deprecated(deprecated_in="3.5.1", removed_in="5.0",
-            current_version=VERSION,
-            details='Use the new Index API instead.')
+@deprecated(
+    deprecated_in="3.5.1",
+    removed_in="5.0",
+    current_version=VERSION,
+    details="Use the new Index API instead.",
+)
 def search_sbt_index(*args, **kwargs):
     """\
     Search an SBT index `tree` with signature `query` for matches above
@@ -108,6 +122,7 @@ def search_sbt_index(*args, **kwargs):
     'idx = load_file_as_index(...); idx.search(query, threshold=...)' instead.
     """
     return search_sbt_index_private(*args, **kwargs)
+
 
 from .sbtmh import create_sbt_index
 from . import lca

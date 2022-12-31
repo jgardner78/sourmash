@@ -12,11 +12,13 @@ from math import log, exp
 
 from .logging import notify
 
+
 def check_distance(dist):
     if not 0 <= dist <= 1:
         raise ValueError(f"Error: distance value {dist :.4f} is not between 0 and 1!")
     else:
         return dist
+
 
 def check_prob_threshold(val, threshold=1e-3):
     """
@@ -29,15 +31,18 @@ def check_prob_threshold(val, threshold=1e-3):
         exceeds_threshold = True
     return val, exceeds_threshold
 
+
 def check_jaccard_error(val, threshold=1e-4):
     exceeds_threshold = False
     if threshold is not None and val > threshold:
         exceeds_threshold = True
     return val, exceeds_threshold
 
+
 @dataclass
 class ANIResult:
     """Base class for distance/ANI from k-mer containment."""
+
     dist: float
     p_nothing_in_common: float
     p_threshold: float = 1e-3
@@ -47,7 +52,9 @@ class ANIResult:
     def check_dist_and_p_threshold(self):
         # check values
         self.dist = check_distance(self.dist)
-        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(self.p_nothing_in_common, self.p_threshold)
+        self.p_nothing_in_common, self.p_exceeds_threshold = check_prob_threshold(
+            self.p_nothing_in_common, self.p_threshold
+        )
 
     def __post_init__(self):
         self.check_dist_and_p_threshold()
@@ -62,6 +69,7 @@ class ANIResult:
 @dataclass
 class jaccardANIResult(ANIResult):
     """Class for distance/ANI from jaccard (includes jaccard_error)."""
+
     jaccard_error: float = None
     je_threshold: float = 1e-4
 
@@ -70,7 +78,9 @@ class jaccardANIResult(ANIResult):
         self.check_dist_and_p_threshold()
         # check jaccard error
         if self.jaccard_error is not None:
-            self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error(self.jaccard_error, self.je_threshold)
+            self.jaccard_error, self.je_exceeds_threshold = check_jaccard_error(
+                self.jaccard_error, self.je_threshold
+            )
         else:
             raise ValueError("Error: jaccard_error cannot be None.")
 
@@ -89,6 +99,7 @@ class ciANIResult(ANIResult):
 
     Set CI defaults to None, just in case CI can't be estimated for given sample.
     """
+
     dist_low: float = None
     dist_high: float = None
 
@@ -158,7 +169,9 @@ def handle_seqlen_nkmers(ksize, *, sequence_len_bp=None, n_unique_kmers=None):
         return n_unique_kmers
     elif sequence_len_bp is None:
         # both are None, raise ValueError
-        raise ValueError("Error: distance estimation requires input of either 'sequence_len_bp' or 'n_unique_kmers'")
+        raise ValueError(
+            "Error: distance estimation requires input of either 'sequence_len_bp' or 'n_unique_kmers'"
+        )
     else:
         n_unique_kmers = sequence_len_bp - (ksize - 1)
         return n_unique_kmers
@@ -175,7 +188,7 @@ def set_size_chernoff(set_size, scaled, *, relative_error=0.05):
     @param relative_error: the desired relative error (defaults to 5%)
     @return: float (the upper bound probability)
     """
-    upper_bound = 1 - 2 * np.exp(- relative_error**2*set_size/(scaled * 3))
+    upper_bound = 1 - 2 * np.exp(-(relative_error**2) * set_size / (scaled * 3))
     return upper_bound
 
 
@@ -190,14 +203,17 @@ def set_size_exact_prob(set_size, scaled, *, relative_error=0.05):
     @return: float (the upper bound probability)
     """
     # Need to check if the edge case is an integer or not. If not, don't include it in the equation
-    pmf_arg = -set_size/scaled * (relative_error - 1)
+    pmf_arg = -set_size / scaled * (relative_error - 1)
     if pmf_arg == int(pmf_arg):
-        prob = binom.cdf(set_size/scaled * (relative_error + 1), set_size, 1/scaled) - \
-               binom.cdf(-set_size/scaled * (relative_error - 1), set_size, 1/scaled) + \
-               binom.pmf(-set_size/scaled * (relative_error - 1), set_size, 1/scaled)
+        prob = (
+            binom.cdf(set_size / scaled * (relative_error + 1), set_size, 1 / scaled)
+            - binom.cdf(-set_size / scaled * (relative_error - 1), set_size, 1 / scaled)
+            + binom.pmf(-set_size / scaled * (relative_error - 1), set_size, 1 / scaled)
+        )
     else:
-        prob = binom.cdf(set_size / scaled * (relative_error + 1), set_size, 1 / scaled) - \
-               binom.cdf(-set_size / scaled * (relative_error - 1), set_size, 1 / scaled)
+        prob = binom.cdf(
+            set_size / scaled * (relative_error + 1), set_size, 1 / scaled
+        ) - binom.cdf(-set_size / scaled * (relative_error - 1), set_size, 1 / scaled)
     return prob
 
 
@@ -225,7 +241,9 @@ def get_exp_probability_nothing_common(
     Arguments: n_unique_kmers, ksize, mutation_rate, scaled
     Returns: float - expected likelihood that nothing is common between sketches
     """
-    n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp=sequence_len_bp,n_unique_kmers=n_unique_kmers)
+    n_unique_kmers = handle_seqlen_nkmers(
+        ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers
+    )
     f_scaled = 1.0 / float(scaled)
     if mutation_rate == 1.0:
         return 1.0
@@ -251,12 +269,14 @@ def containment_to_distance(
     Containment --> distance CI (one step)
     """
     sol1, sol2, point_estimate = None, None, None
-    n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp = sequence_len_bp, n_unique_kmers=n_unique_kmers)
+    n_unique_kmers = handle_seqlen_nkmers(
+        ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers
+    )
     if containment == 0:
-        #point_estimate = 1.0
+        # point_estimate = 1.0
         point_estimate = sol1 = sol2 = 1.0
     elif containment == 1:
-        #point_estimate = 0.0
+        # point_estimate = 0.0
         point_estimate = sol1 = sol2 = 0.0
     else:
         point_estimate = 1.0 - containment ** (1.0 / ksize)
@@ -308,7 +328,13 @@ def containment_to_distance(
     prob_nothing_in_common = get_exp_probability_nothing_common(
         point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers
     )
-    return ciANIResult(point_estimate, prob_nothing_in_common, dist_low=sol2, dist_high=sol1, p_threshold=prob_threshold)
+    return ciANIResult(
+        point_estimate,
+        prob_nothing_in_common,
+        dist_low=sol2,
+        dist_high=sol1,
+        p_threshold=prob_threshold,
+    )
 
 
 def jaccard_to_distance(
@@ -341,7 +367,9 @@ def jaccard_to_distance(
     useful for determining whether scaled is sufficient for these comparisons.
     """
     error_lower_bound = None
-    n_unique_kmers = handle_seqlen_nkmers(ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers)
+    n_unique_kmers = handle_seqlen_nkmers(
+        ksize, sequence_len_bp=sequence_len_bp, n_unique_kmers=n_unique_kmers
+    )
     if jaccard == 0:
         point_estimate = 1.0
         error_lower_bound = 0.0
@@ -361,4 +389,10 @@ def jaccard_to_distance(
     prob_nothing_in_common = get_exp_probability_nothing_common(
         point_estimate, ksize, scaled, n_unique_kmers=n_unique_kmers
     )
-    return jaccardANIResult(point_estimate, prob_nothing_in_common, jaccard_error=error_lower_bound, p_threshold=prob_threshold, je_threshold=err_threshold)
+    return jaccardANIResult(
+        point_estimate,
+        prob_nothing_in_common,
+        jaccard_error=error_lower_bound,
+        p_threshold=prob_threshold,
+        je_threshold=err_threshold,
+    )

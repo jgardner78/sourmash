@@ -30,7 +30,7 @@
             {
               maturin = pkgs.rustPlatform.buildRustPackage rec {
                 pname = "maturin";
-                version = "0.14.7";
+                version = "4.7.0"
                 src = pkgs.fetchFromGitHub {
                   owner = "PyO3";
                   repo = "maturin";
@@ -61,7 +61,7 @@
 
         screed = python.buildPythonPackage rec {
           pname = "screed";
-          version = "1.1";
+          version = "4.7.0"
           #format = "pyproject";
 
           src = pkgs.fetchFromGitHub {
@@ -90,7 +90,7 @@
 
           sourmash = python.buildPythonPackage rec {
             pname = "sourmash";
-            version = "4.6.1";
+            version = "4.7.0"
             format = "pyproject";
 
             src = ./.;

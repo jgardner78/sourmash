@@ -12,14 +12,14 @@ git clone https://github.com/sourmash-bio/sourmash.git
 ```
 sourmash runs under Python 3.8 and later.
 
-We recommend using `conda` or `Nix` for setting up an environment for developing
+We recommend using `pixi` or `Nix` for setting up an environment for developing
 new features, running tests and code quality checks.
 Here are some suggestions on how to set them up (note: you only need one =])
 
-### Using mamba (conda alternative)
+### Using pixi (conda alternative)
 
-Follow the [installation instructions](https://github.com/conda-forge/miniforge#install) for
-installing `mambaforge` (a conda distribution that uses
+Follow the [installation instructions](https://github.com/prefix-dev/pixi) for
+installing `pixi` (a conda distribution that uses
 [`mamba`](https://github.com/TheSnakePit/mamba)
 and the [`conda-forge`](https://conda-forge.org/) channel by default).
 
@@ -32,7 +32,7 @@ for development.
 
 To activate the new environment, run
 ```
-conda activate sourmash_dev
+pixi shell
 ```
 and proceed to the ["Running tests and checks"](#running-tests-and-checks) section.
 
@@ -50,7 +50,7 @@ to start an environment ready for [running tests and checks](#running-tests-and-
 ### General instructions
 
 As long as you have `tox` and a Rust compiler available,
-you can skip `mamba` or `Nix`.
+you can skip `pixi` or `Nix`.
 
 For Rust, we suggest using `rustup` to install the Rust environment:
 ```
